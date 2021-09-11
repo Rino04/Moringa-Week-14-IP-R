@@ -1,0 +1,136 @@
+---
+title: "Week 14 IP Part 3"
+author: "Jackson Kyalo"
+date: "9/9/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Loading the arules library
+suppressWarnings(
+        suppressMessages(if
+                         (!require(arules, quietly=TRUE))
+                install.packages("arules")))
+library(arules)
+```
+
+
+```{r}
+#Load the data and preview the head
+path="C:/Users/Rino/Desktop/Remote/Supermarket_Sales_Dataset II.csv"
+super <-read.transactions(path, sep = ",")
+```
+
+```{r}
+# Verifying the object's class
+class(super)
+```
+
+```{r}
+# Previewing our first 5 transactions
+inspect(super[1:5])
+```
+```{r}
+# ICreating a dataframe
+items<-as.data.frame(itemLabels(super))
+colnames(items) <- "Item"
+head(items, 10) 
+```
+```{r}
+# Generating a summary of the transaction dataset
+# ---
+# This would give us some information such as the most purchased items, 
+# distribution of the item sets (no. of items purchased in each transaction), etc.
+# ---
+# 
+summary(super)
+```
+There are 7501 transactions evident in our dataset.The most purchased items were mineral water, eggs, spaghetti, french fries and chocolate. 
+
+```{r}
+# Exploring the frequency of some articles and checking the transaction percentages of the first 20 items.
+itemFrequency(super[, 1:20],type = "absolute")
+round(itemFrequency(super[, 1:20],type = "relative")*100,2)
+```
+```{r}
+# plot the frequency of items
+# Displaying top 10 most common items in the transactions dataset
+itemFrequencyPlot(super, topN = 10,col="darkgreen")
+```
+```{r}
+# plot the frequency of items
+# and the items whose relative importance is at least 10%
+itemFrequencyPlot(super, support = 0.1,col="darkred")
+```
+```{r}
+# Building a model based on association rules using the apriori function 
+# We use Min Support as 0.001 and confidence as 0.8
+
+rules <- apriori (super, parameter = list(supp = 0.001, conf = 0.8))
+rules
+```
+We have gotten 74 rules. 
+
+```{r}
+# However, in order to illustrate the sensitivity of the model to these two parameters, we will see what happens if we increase the support or lower the confidence level
+
+# Building a apriori model with Min Support as 0.002 and confidence as 0.8.
+rules2 <- apriori (super,parameter = list(supp = 0.002, conf = 0.8)) 
+rules2
+```
+```{r}
+# Building apriori model with Min Support as 0.002 and confidence as 0.6.
+rules3 <- apriori (super, parameter = list(supp = 0.001, conf = 0.6)) 
+
+rules3
+```
+In our first example, we increased the minimum support of 0.001 to 0.002 and model rules went from 74 to only 2. This would lead us to understand that using a high level of support can make the model lose interesting rules. In the second example, we decreased the minimum confidence level to 0.6 and the number of model rules went from 74 to 545 This would mean that using a low confidence level increases the number of rules to quite an extent and many will not be useful.
+```{r}
+# Check the summaries of the rules
+summary(rules)
+```
+```{r}
+# Observing rules built in our model i.e. first 5 model rules
+inspect(rules[1:5])
+```
+Interpretation: If a customer buys bacon and pancakes there is 81% of him or her purchasing spaghetti or if one buys mushrrom cream sauce and pasta there is 95% confidence of him or her to purchase escalope.
+
+```{r}
+# Ordering these rules by a criteria such as the level of confidence
+# then looking at the first five rules.
+# We can also use different criteria such as: (by = "lift" or by = "support")
+# 
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+#Promotion
+```{r}
+# If we're interested in making a promotion relating to the sale of milk, 
+# we could create a subset of rules concerning these products 
+
+milk <- subset(rules, subset = rhs %pin% "milk")
+ 
+# Then order by confidence
+milk<-sort(milk, by="confidence", decreasing=TRUE)
+inspect(milk[1:5])
+```
+```{r}
+# What if we wanted to determine items that customers might buy who have previously bought milk?
+# Subset the rules
+milk <- subset(rules, subset = lhs %pin% "milk")
+
+# Order by confidence
+milk<-sort(milk, by="confidence", decreasing=TRUE)
+
+# inspect top 5
+inspect(milk[1:5])
+```
+
+
