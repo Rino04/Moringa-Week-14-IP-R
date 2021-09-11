@@ -1,0 +1,320 @@
+---
+title: "Week 14 IP Part 1"
+author: "Jackson Kyalo"
+date: "9/9/2021"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r} 
+#Load the data and preview the head
+sales <-read.csv("C:/Users/Rino/Desktop/Remote/Supermarket_Dataset_1 - Sales Data.csv")
+head(sales)
+```
+```{r}
+#check the structure of the data
+str(sales)
+```
+```{r}
+#Preview the tail
+tail(sales)
+```
+
+```{r}
+#check shape
+dim(sales)
+```
+Our dataset has 1000 rows and 16 columns with eight  of which have a character data type, one is an integer and the other seven are numerical.
+
+#Data Cleaning
+```{r}
+#check for missing values
+sum(is.na(sales))
+```
+There are  no missing values in the data
+```{r}
+#Check for duplicates
+ sum(duplicated(sales))
+```
+There are no duplicated values.
+```{r}
+### Identify numeric cols
+num <- unlist(lapply(sales, is.numeric)) 
+y<- colnames(sales[num])
+y
+```
+```{r}
+#Create a dataframe of the numeric cols
+num <-sales[y]
+head(num)
+```
+
+
+```{r}
+#Check for outliers
+for(i in 2:ncol(num)) { 
+ boxplot(num[i], xlab=colnames(num[i]))
+}
+```
+In our data, there are outliers in Tax, cogs, gross income and Total columns.
+```{r}
+#Check for outliers
+boxplot(sales$Unit.price,
+        main ="Unit Price",
+        notch = TRUE)
+```
+Unit price has no outliers
+
+
+#Exploratory Data Analysis
+##Univarient Analysis
+```{r}
+#Check the statistical summaries of the data
+summary(sales)
+```
+```{r}
+#getting measure of dispersion fro each cols
+#create a function
+library(moments)
+summary.list = function(x)list(
+  Mean=mean(x, na.rm=TRUE),
+  Median=median(x, na.rm=TRUE),
+  Max=max(x, na.rm=TRUE),
+  Min=min(x,na.rm = TRUE),
+  Skewness=skewness(x, na.rm=TRUE),
+  Kurtosis=kurtosis(x, na.rm=TRUE),
+  Variance=var(x, na.rm=TRUE),
+  Std.Dev=sd(x, na.rm=TRUE),
+  Coeff.Variation.Prcnt=sd(x, na.rm=TRUE)/mean(x, na.rm=TRUE)*100,
+  Std.Error=sd(x, na.rm=TRUE)/sqrt(length(x[!is.na(x)]))
+)
+#calling the function
+sapply(sales[,c(y)], summary.list)
+```
+The average unit price is 55.67 with the highest being 99.96 and the lowest is 10.08 and is skewed to the left. The maximum quantity sold for any item is 10 with average number being 5. The maximum rating given to any item is 10 with average rating for the products being 6.97. The maximum tax imposed on the items is 49.63 with average tax pr item being 15. 
+#Plot
+```{r}
+num
+```
+```{r}
+hist(sales$Unit.price, col  = "orange")
+```
+
+```{r}
+hist(sales$Quantity, col  = "orange")
+```
+THe quantity is skewed to the right.
+```{r}
+hist(sales$Tax, col  = "orange")
+```
+```{r}
+hist(sales$cogs, col  = "orange")
+```
+```{r}
+hist(sales$gross.margin.percentage, col  = "orange")
+```
+```{r}
+hist(sales$gross.income, col  = "orange")
+```
+```{r}
+hist(sales$Rating, col  = "orange")
+```
+
+## Bivariate Analysis
+### Correlation
+```{r}
+#check for correlation
+library(corrplot)
+correlation <- cor(sales[,c(6,7,8,12,14,15,16)])
+corrplot(correlation, method = "square", type = "upper", diag = TRUE)
+```
+
+
+#Modelling
+```{r}
+#check head
+head(sales)
+```
+## Dimensionality Reduction
+### PCA (Principal component Analysis)
+```{r}
+#Selecting data for pca
+sales_df<-num[,-5]
+sales_df
+ 
+```
+
+```{r}
+sales.pca <- prcomp(sales_df, center = TRUE, scale. = TRUE)
+summary(sales.pca)
+```
+ As a result we obtain 7 principal components, each which explain a percentate of the total variation of the dataset. PC1 explains 70.31%% of the total variance, which means that more two-thirds  of the information in the dataset (7 variables) can be encapsulated
+ by just that one Principal Component. PC2 explains 14,29% of the variance. 
+
+```{r}
+#checking the structure 
+str(sales.pca)
+```
+#Plot
+```{r}
+#Plotting the pca
+library(devtools)
+install_github("vqv/ggbiplot")
+#Load 
+library(ggbiplot)
+ggbiplot(sales.pca, obs.scale = 1, var.scale = 1)
+```
+```{r}
+head(sales)
+```
+
+
+```{r}
+#Selecting pca 1 to 3 and adding to the main
+sales_pca <- cbind(sales,sales.pca$x[,1:3])
+#plotting PC1 and PC2 to check the products by grouping based on Customer Type
+ggplot(sales_pca,aes(PC1,PC2,, col=Product.line,fill=Customer.type))+
+ stat_ellipse(geom = "polygon",col='green',alpha=1)+
+ geom_point(col='black',shape=21)
+```
+# Conclusion
+ Quantity, Rating, Unit Price and Gross income are the most important features in this analysis. Marketing team when adversting their products should consider quality of the product, unit price, rating of the products and the gross income of their consumers. 
+ 
+ 
+ 
+# Feature Selection
+## Filter Methods
+```{r}
+# Installing and loading our caret and corrplot package
+# ---
+# 
+suppressWarnings(
+        suppressMessages(if
+                         (!require(caret, quietly=TRUE))
+                install.packages("caret")))
+library(caret)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(corrplot, quietly=TRUE))
+                install.packages("corrplot")))
+library(corrplot)
+```
+
+
+```{r}
+# Calculating the correlation matrix
+corr<- cor(num)
+corr
+```
+```{r}
+# Find attributes that are highly correlated
+# ---
+#
+highlyCorr <- findCorrelation(corr, cutoff=0.75)
+highlyCorr
+names(sales[,highlyCorr])
+```
+```{r}
+# We can remove the variables with a higher correlation 
+sales_dt<-sales_df[-highlyCorr]
+head(sales_dt)
+```
+```{r}
+#Graphical comparison
+par(mfrow = c(1, 2))
+#Before removing the highly correlated features 
+corrplot(cor(sales_df), order = "hclust")
+```
+
+```{r}
+#Afer removing the highly correlated features
+corrplot(cor(sales_dt), order = "hclust")
+```
+## Wrapper Methods
+```{r}
+# Installing and loading our clustvarsel and mclust package
+suppressWarnings(
+        suppressMessages(if
+                         (!require(clustvarsel, quietly=TRUE))
+                install.packages("clustvarsel")))
+                         
+library(clustvarsel)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(mclust, quietly=TRUE))
+                install.packages("mclust")))
+library(mclust)
+```
+```{r}
+#Normalize the data
+library(dplyr)
+sale_df.norm<-as.data.frame(scale(sales_df))
+head(sale_df.norm)
+```
+
+
+```{r}
+#Sequential forward greedy search:
+out = clustvarsel(sale_df.norm, G = 1:5)
+out
+```
+
+```{r}
+# Clustering model
+
+Subset1 = sale_df.norm[,out$subset]
+mod = Mclust(Subset1, G = 1:5)
+summary(mod)
+```
+
+```{r}
+plot(mod,c("classification"))
+```
+
+
+## Embedded Methods
+```{r}
+#Installing and loading our wskm and cluster package
+suppressWarnings(
+        suppressMessages(if
+                         (!require(wskm, quietly=TRUE))
+                install.packages("wskm")))
+library(wskm)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(cluster, quietly=TRUE))
+                install.packages("cluster")))
+library("cluster")
+```
+
+```{r}
+#Deploying the function
+set.seed(23)
+model <- ewkm(sales_df, 3, lambda=2, maxiter=1000)
+model
+```
+
+```{r}
+#Clustering
+clusplot(sales_df, model$cluster, color=TRUE, shade=TRUE,
+          lines=1,main='Cluster Analysis for Supermarket sales')
+```
+
+```{r}
+# Weights are calculated for each variable and cluster. 
+# They are a measure of the relative importance of each variable 
+# with regards to the membership of the observations to that cluster. 
+# The weights are incorporated into the distance function, 
+# typically reducing the distance for more important variables.
+# Weights remain stored in the model and we can check them as follows:
+# 
+round(model$weights*100,2)
+```
+
+
+

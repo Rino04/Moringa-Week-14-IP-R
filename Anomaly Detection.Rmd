@@ -1,0 +1,66 @@
+---
+title: "Week 14 IP Part 4"
+author: "Jackson Kyalo"
+date: "9/9/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load libraries
+suppressWarnings(
+        suppressMessages(if
+                         (!require(tidyverse, quietly=TRUE))
+                install.packages("tidyverse")))
+library(tidyverse)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(anomalize, quietly=TRUE))
+                install.packages("anomalize")))
+library(anomalize)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(tibbletime, quietly=TRUE))
+                install.packages("tibbletime")))
+library(tibbletime)
+suppressWarnings(
+        suppressMessages(if
+                         (!require(dplyr, quietly=TRUE))
+                install.packages("dplyr")))
+library(dplyr)
+```
+
+```{r}
+#Load the data 
+sales <-read.csv("C:/Users/Rino/Desktop/Remote/Supermarket_Sales_Forecasting - Sales.csv")
+sales$Date <- as.Date(sales$Date, format ="%m/%d/%Y")
+sales$Date <- sort(sales$Date, decreasing = FALSE)
+sales <- as_tbl_time(sales, index = Date)
+sales <- sales %>%as_period("daily")
+head(sales)
+```
+```{r}
+#Check the shape
+dim(sales)
+```
+The data has 89 rows and 2 columns.
+```{r}
+#Check the structure
+str(sales)
+```
+
+```{r}
+# Detecting our anomalies
+sales %>%
+    time_decompose(Sales) %>%
+    anomalize(remainder) %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
+```
+There are no anomalies in our dataset.
